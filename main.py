@@ -62,6 +62,12 @@ elif page == "Transactions":
                                     format_func=lambda x: "Troop" if x is None else f"{scout_data.loc[scout_data['scout_id'] == x, 'name'].iloc[0]} (ID: {x})")
             trans_type = st.radio("Type", ["credit", "debit"])
 
+        # Show option to affect troop account for scout transactions
+        affects_troop = False
+        if category == "Scout Account Deposit" and scout_id:
+            affects_troop = st.checkbox("Also affect Troop account", 
+                help="When checked, this Scout Account transaction will also impact the Troop's balance")
+
         # Show warning for Scout Account Deposits
         if category == "Scout Account Deposit" and not scout_id:
             st.warning("Please select a Scout for Scout Account Deposits")
@@ -74,7 +80,7 @@ elif page == "Transactions":
                 st.session_state.finance_manager.add_transaction(
                     date, description, category, 
                     amount if trans_type == 'credit' else -amount,
-                    scout_id, trans_type
+                    scout_id, trans_type, affects_troop
                 )
                 st.success("Transaction added successfully!")
 
@@ -82,11 +88,14 @@ elif page == "Transactions":
     st.subheader("Transaction History")
     transactions = st.session_state.finance_manager.get_transactions()
     if not transactions.empty:
-        # Add account type column to display
+        # Add account type and affects troop columns to display
         transactions['Account'] = transactions.apply(
-            lambda x: f"{scout_data.loc[scout_data['scout_id'] == x['scout_id'], 'name'].iloc[0]}'s Account" 
-            if x['account_type'] == 'scout' and not pd.isna(x['scout_id']) 
-            else "Troop Account", axis=1
+            lambda x: (
+                f"{scout_data.loc[scout_data['scout_id'] == x['scout_id'], 'name'].iloc[0]}'s Account" +
+                (" (affects Troop)" if x['affects_troop'] else "")
+            ) if x['account_type'] == 'scout' and not pd.isna(x['scout_id']) 
+            else "Troop Account", 
+            axis=1
         )
 
         display_df = transactions[['date', 'description', 'category', 'amount', 'Account']]

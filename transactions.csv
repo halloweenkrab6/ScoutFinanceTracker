@@ -1,3 +1,5 @@
-date,description,category,amount,scout_id,type,account_type
-2025-02-19,SA depoist,Other,200.0,1,credit,troop
-2025-02-19,February campout,Camping,-15.0,1,debit,troop
+date,description,category,amount,scout_id,type,account_type,affects_troop
+2025-02-19,SA depoist,Other,200.0,1.0,credit,troop,False
+2025-02-19,February campout,Camping,-15.0,1.0,debit,troop,False
+2025-02-19,Stock items purchase,Equipment,-25.0,,debit,troop,False
+2025-02-19,SA Deposit Smith,Scout Account Deposit,50.0,2.0,credit,scout,False
