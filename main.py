@@ -24,27 +24,28 @@ st.title("🏕️ Boy Scout Troop Finance Tracker")
 page = st.sidebar.radio("Navigation", ["Dashboard", "Transactions", "Scouts", "Reports"])
 
 if page == "Dashboard":
-    # Display total balance
-    total_balance = st.session_state.finance_manager.get_total_balance()
-    st.header("Troop Balance")
-    st.metric("Current Balance", format_currency(total_balance))
-    
+    # Display troop balance
+    troop_balance = st.session_state.finance_manager.get_troop_balance()
+    st.header("Troop Account")
+    st.metric("Troop Balance", format_currency(troop_balance))
+
     # Show balance timeline
     st.subheader("Balance Timeline")
     transactions = st.session_state.finance_manager.get_transactions()
-    timeline = create_balance_timeline(transactions)
+    timeline = create_balance_timeline(transactions[transactions['account_type'] == 'troop'])
     if timeline:
         st.plotly_chart(timeline, use_container_width=True)
-    
+
     # Show category breakdown
     st.subheader("Expense Categories")
-    breakdown = create_category_breakdown(transactions)
+    troop_transactions = transactions[transactions['account_type'] == 'troop']
+    breakdown = create_category_breakdown(troop_transactions)
     if breakdown:
         st.plotly_chart(breakdown, use_container_width=True)
 
 elif page == "Transactions":
     st.header("Transaction Management")
-    
+
     # Transaction entry form
     with st.form("transaction_form"):
         col1, col2 = st.columns(2)
@@ -60,25 +61,40 @@ elif page == "Transactions":
                                     options=scout_options,
                                     format_func=lambda x: "Troop" if x is None else f"{scout_data.loc[scout_data['scout_id'] == x, 'name'].iloc[0]} (ID: {x})")
             trans_type = st.radio("Type", ["credit", "debit"])
-        
+
+        # Show warning for Scout Account Deposits
+        if category == "Scout Account Deposit" and not scout_id:
+            st.warning("Please select a Scout for Scout Account Deposits")
+
         submit = st.form_submit_button("Add Transaction")
         if submit:
-            st.session_state.finance_manager.add_transaction(
-                date, description, category, 
-                amount if trans_type == 'credit' else -amount,
-                scout_id, trans_type
-            )
-            st.success("Transaction added successfully!")
-    
+            if category == "Scout Account Deposit" and not scout_id:
+                st.error("A Scout must be selected for Scout Account Deposits")
+            else:
+                st.session_state.finance_manager.add_transaction(
+                    date, description, category, 
+                    amount if trans_type == 'credit' else -amount,
+                    scout_id, trans_type
+                )
+                st.success("Transaction added successfully!")
+
     # Transaction history
     st.subheader("Transaction History")
     transactions = st.session_state.finance_manager.get_transactions()
     if not transactions.empty:
-        st.dataframe(transactions.style.format({
+        # Add account type column to display
+        transactions['Account'] = transactions.apply(
+            lambda x: f"{scout_data.loc[scout_data['scout_id'] == x['scout_id'], 'name'].iloc[0]}'s Account" 
+            if x['account_type'] == 'scout' and not pd.isna(x['scout_id']) 
+            else "Troop Account", axis=1
+        )
+
+        display_df = transactions[['date', 'description', 'category', 'amount', 'Account']]
+        st.dataframe(display_df.style.format({
             'amount': format_currency,
             'date': lambda x: x.strftime('%Y-%m-%d')
         }))
-        
+
         # Export option
         if st.button("Export to CSV"):
             csv = st.session_state.finance_manager.export_transactions()
@@ -91,7 +107,7 @@ elif page == "Transactions":
 
 elif page == "Scouts":
     st.header("Scout Management")
-    
+
     # Add new scout
     with st.form("scout_form"):
         col1, col2 = st.columns(2)
@@ -99,14 +115,14 @@ elif page == "Scouts":
             name = st.text_input("Scout Name")
         with col2:
             patrol = st.selectbox("Patrol", PATROLS)
-        
+
         submit = st.form_submit_button("Add Scout")
         if submit and name:
             scout_id = st.session_state.finance_manager.add_scout(name, patrol)
             st.success(f"Scout added successfully! Scout ID: {scout_id}")
-    
+
     # Display scout balances
-    st.subheader("Scout Balances")
+    st.subheader("Scout Account Balances")
     scouts = st.session_state.finance_manager.scouts
     if not scouts.empty:
         st.dataframe(scouts.style.format({
@@ -115,7 +131,7 @@ elif page == "Scouts":
 
 elif page == "Reports":
     st.header("Financial Reports")
-    
+
     # Date range selector
     col1, col2 = st.columns(2)
     with col1:
@@ -123,7 +139,7 @@ elif page == "Reports":
                                   datetime.today() - timedelta(days=30))
     with col2:
         end_date = st.date_input("End Date", datetime.today())
-    
+
     # Filter options
     scout_data = st.session_state.finance_manager.scouts
     scout_filter = st.selectbox(
@@ -131,33 +147,58 @@ elif page == "Reports":
         options=[None] + list(scout_data['scout_id']),
         format_func=lambda x: "All Scouts" if x is None else f"{scout_data.loc[scout_data['scout_id'] == x, 'name'].iloc[0]} (ID: {x})"
     )
-    
+
     category_filter = st.selectbox(
         "Filter by Category",
         options=[None] + TRANSACTION_CATEGORIES,
         format_func=lambda x: "All Categories" if x is None else x
     )
-    
+
     # Display filtered transactions
     filtered_transactions = st.session_state.finance_manager.get_transactions(
         start_date, end_date, scout_filter, category_filter
     )
-    
+
     if not filtered_transactions.empty:
-        st.dataframe(filtered_transactions.style.format({
+        # Add account type column
+        filtered_transactions['Account'] = filtered_transactions.apply(
+            lambda x: f"{scout_data.loc[scout_data['scout_id'] == x['scout_id'], 'name'].iloc[0]}'s Account" 
+            if x['account_type'] == 'scout' and not pd.isna(x['scout_id']) 
+            else "Troop Account", axis=1
+        )
+
+        display_df = filtered_transactions[['date', 'description', 'category', 'amount', 'Account']]
+        st.dataframe(display_df.style.format({
             'amount': format_currency,
             'date': lambda x: x.strftime('%Y-%m-%d')
         }))
-        
+
         # Summary statistics
-        total = filtered_transactions['amount'].sum()
-        credits = filtered_transactions[filtered_transactions['amount'] > 0]['amount'].sum()
-        debits = filtered_transactions[filtered_transactions['amount'] < 0]['amount'].sum()
-        
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total", format_currency(total))
-        col2.metric("Total Credits", format_currency(credits))
-        col3.metric("Total Debits", format_currency(debits))
+        troop_transactions = filtered_transactions[filtered_transactions['account_type'] == 'troop']
+        scout_transactions = filtered_transactions[filtered_transactions['account_type'] == 'scout']
+
+        st.subheader("Summary")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**Troop Account**")
+            troop_total = troop_transactions['amount'].sum()
+            troop_credits = troop_transactions[troop_transactions['amount'] > 0]['amount'].sum()
+            troop_debits = troop_transactions[troop_transactions['amount'] < 0]['amount'].sum()
+
+            st.metric("Total", format_currency(troop_total))
+            st.metric("Credits", format_currency(troop_credits))
+            st.metric("Debits", format_currency(troop_debits))
+
+        with col2:
+            st.markdown("**Scout Accounts**")
+            scout_total = scout_transactions['amount'].sum()
+            scout_credits = scout_transactions[scout_transactions['amount'] > 0]['amount'].sum()
+            scout_debits = scout_transactions[scout_transactions['amount'] < 0]['amount'].sum()
+
+            st.metric("Total", format_currency(scout_total))
+            st.metric("Credits", format_currency(scout_credits))
+            st.metric("Debits", format_currency(scout_debits))
     else:
         st.info("No transactions found for the selected filters.")
 

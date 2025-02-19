@@ -1,2 +1,3 @@
-date,description,category,amount,scout_id,type
-2025-02-19,SA depoist,Other,200.0,1,credit
+date,description,category,amount,scout_id,type,account_type
+2025-02-19,SA depoist,Other,200.0,1,credit,troop
+2025-02-19,February campout,Camping,-15.0,1,debit,troop
