@@ -54,9 +54,11 @@ elif page == "Transactions":
             category = st.selectbox("Category", TRANSACTION_CATEGORIES)
         with col2:
             amount = st.number_input("Amount", min_value=0.0, step=0.01)
+            scout_data = st.session_state.finance_manager.scouts
+            scout_options = [None] + list(scout_data['scout_id'])
             scout_id = st.selectbox("Scout (optional)", 
-                                  options=[None] + list(st.session_state.finance_manager.scouts['scout_id']),
-                                  format_func=lambda x: "Troop" if x is None else f"Scout {x}")
+                                    options=scout_options,
+                                    format_func=lambda x: "Troop" if x is None else f"{scout_data.loc[scout_data['scout_id'] == x, 'name'].iloc[0]} (ID: {x})")
             trans_type = st.radio("Type", ["credit", "debit"])
         
         submit = st.form_submit_button("Add Transaction")
@@ -123,10 +125,11 @@ elif page == "Reports":
         end_date = st.date_input("End Date", datetime.today())
     
     # Filter options
+    scout_data = st.session_state.finance_manager.scouts
     scout_filter = st.selectbox(
         "Filter by Scout",
-        options=[None] + list(st.session_state.finance_manager.scouts['scout_id']),
-        format_func=lambda x: "All Scouts" if x is None else f"Scout {x}"
+        options=[None] + list(scout_data['scout_id']),
+        format_func=lambda x: "All Scouts" if x is None else f"{scout_data.loc[scout_data['scout_id'] == x, 'name'].iloc[0]} (ID: {x})"
     )
     
     category_filter = st.selectbox(
