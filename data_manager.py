@@ -18,11 +18,16 @@ class ScoutFinanceManager:
                 'scout_id': [],
                 'name': [],
                 'patrol': [],
+                'email': [],  # Add email field
                 'balance': []
             })
             self.scouts.to_csv(self.scouts_file, index=False)
         else:
             self.scouts = pd.read_csv(self.scouts_file)
+            # Add email column if it doesn't exist
+            if 'email' not in self.scouts.columns:
+                self.scouts['email'] = ''
+                self.scouts.to_csv(self.scouts_file, index=False)
             self.scouts['balance'] = 0.0  # Reset balances for recalculation
 
         # Then initialize transactions
@@ -108,12 +113,13 @@ class ScoutFinanceManager:
             self.scouts.loc[self.scouts['scout_id'] == scout_id, 'balance'] += amount
             self.scouts.to_csv(self.scouts_file, index=False)
 
-    def add_scout(self, name, patrol):
+    def add_scout(self, name, patrol, email):  # Add email parameter
         scout_id = len(self.scouts) + 1
         new_scout = pd.DataFrame({
             'scout_id': [scout_id],
             'name': [name],
             'patrol': [patrol],
+            'email': [email],  # Add email field
             'balance': [0.0]
         })
         self.scouts = pd.concat([self.scouts, new_scout], ignore_index=True)
