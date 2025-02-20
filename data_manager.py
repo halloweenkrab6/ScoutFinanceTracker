@@ -126,6 +126,25 @@ class ScoutFinanceManager:
         self.scouts.to_csv(self.scouts_file, index=False)
         return scout_id
 
+    def edit_scout(self, scout_id, name=None, patrol=None, email=None):
+        """Edit a scout's information."""
+        if scout_id in self.scouts['scout_id'].values:
+            if name is not None:
+                self.scouts.loc[self.scouts['scout_id'] == scout_id, 'name'] = name
+            if patrol is not None:
+                self.scouts.loc[self.scouts['scout_id'] == scout_id, 'patrol'] = patrol
+            if email is not None:
+                self.scouts.loc[self.scouts['scout_id'] == scout_id, 'email'] = email
+            self.scouts.to_csv(self.scouts_file, index=False)
+            return True
+        return False
+
+    def get_scout(self, scout_id):
+        """Get a scout's information."""
+        if scout_id in self.scouts['scout_id'].values:
+            return self.scouts[self.scouts['scout_id'] == scout_id].iloc[0].to_dict()
+        return None
+
     def get_troop_balance(self):
         return self.troop_balance
 
