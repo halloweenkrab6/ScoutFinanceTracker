@@ -57,7 +57,15 @@ elif page == "Transactions":
             description = st.text_input("Description")
             category = st.selectbox("Category", TRANSACTION_CATEGORIES)
         with col2:
-            amount = st.number_input("Amount", min_value=0.0, step=0.01)
+            # Rename Amount to Bank Amount and add Scout Account Amount
+            if category == "Scout Account Deposit":
+                bank_amount = st.number_input("Bank Amount", min_value=0.0, step=0.01,
+                    help="Amount deposited to the bank")
+                scout_amount = st.number_input("Scout Account Amount", min_value=0.0, step=0.01,
+                    help="Amount credited to scout's account (may differ from bank amount)")
+            else:
+                amount = st.number_input("Amount", min_value=0.0, step=0.01)
+
             scout_data = st.session_state.finance_manager.scouts
             scout_options = [None] + list(scout_data['scout_id'])
             scout_id = st.selectbox("Scout (optional)", 
@@ -80,9 +88,17 @@ elif page == "Transactions":
             if category == "Scout Account Deposit" and not scout_id:
                 st.error("A Scout must be selected for Scout Account Deposits")
             else:
+                # Use appropriate amount values based on transaction type
+                if category == "Scout Account Deposit":
+                    amount_val = bank_amount if trans_type == 'credit' else -bank_amount
+                    scout_amount_val = scout_amount if trans_type == 'credit' else -scout_amount
+                else:
+                    amount_val = amount if trans_type == 'credit' else -amount
+                    scout_amount_val = amount_val  # For non-scout deposits, amounts are the same
+
                 st.session_state.finance_manager.add_transaction(
                     date, description, category, 
-                    amount if trans_type == 'credit' else -amount,
+                    amount_val, scout_amount_val,
                     scout_id, trans_type, affects_troop
                 )
                 st.success("Transaction added successfully!")
@@ -101,11 +117,23 @@ elif page == "Transactions":
             axis=1
         )
 
-        display_df = transactions[['date', 'description', 'category', 'amount', 'Account']]
-        st.dataframe(display_df.style.format({
-            'amount': format_currency,
-            'date': lambda x: x.strftime('%Y-%m-%d')
-        }))
+        # Show both amounts for Scout Account Deposits
+        if 'scout_amount' in transactions.columns: #Check if column exists to avoid error
+          display_df = transactions[['date', 'description', 'category', 'amount', 'scout_amount', 'Account']]
+          st.dataframe(display_df.style.format({
+              'amount': format_currency,
+              'scout_amount': format_currency,
+              'date': lambda x: x.strftime('%Y-%m-%d')
+          }).set_properties(**{
+              'amount': [{'color': 'blue'}],
+              'scout_amount': [{'color': 'green'}]
+          }))
+        else:
+          display_df = transactions[['date', 'description', 'category', 'amount', 'Account']]
+          st.dataframe(display_df.style.format({
+              'amount': format_currency,
+              'date': lambda x: x.strftime('%Y-%m-%d')
+          }))
 
         # Export option
         if st.button("Export to CSV"):
