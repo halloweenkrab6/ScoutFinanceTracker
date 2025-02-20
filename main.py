@@ -15,6 +15,9 @@ from styles import apply_custom_styles
 if 'finance_manager' not in st.session_state:
     st.session_state.finance_manager = ScoutFinanceManager()
 
+if 'editing_scout' not in st.session_state:
+    st.session_state.editing_scout = None
+
 # Apply custom styles
 apply_custom_styles()
 
@@ -134,15 +137,61 @@ elif page == "Scouts":
                 scout_id = st.session_state.finance_manager.add_scout(name, patrol, email)
                 st.success(f"Scout added successfully! Scout ID: {scout_id}")
 
-    # Display scout balances
+    # Display scout balances with edit buttons
     st.subheader("Scout Account Balances")
     scouts = st.session_state.finance_manager.scouts
     if not scouts.empty:
-        # Reorder columns to show email
-        display_scouts = scouts[['scout_id', 'name', 'email', 'patrol', 'balance']]
-        st.dataframe(display_scouts.style.format({
-            'balance': format_currency
-        }))
+        # Create columns for the table and edit buttons
+        col1, col2 = st.columns([3, 1])
+
+        with col1:
+            # Display scouts table
+            display_scouts = scouts[['scout_id', 'name', 'email', 'patrol', 'balance']]
+            st.dataframe(display_scouts.style.format({
+                'balance': format_currency
+            }))
+
+        with col2:
+            # Add edit button for each scout
+            scout_to_edit = st.selectbox(
+                "Select Scout to Edit",
+                options=list(scouts['scout_id']),
+                format_func=lambda x: scouts.loc[scouts['scout_id'] == x, 'name'].iloc[0]
+            )
+
+            if st.button("Edit Selected Scout"):
+                st.session_state.editing_scout = scout_to_edit
+
+        # Edit form
+        if st.session_state.editing_scout is not None:
+            st.subheader(f"Edit Scout Information")
+            scout_info = st.session_state.finance_manager.get_scout(st.session_state.editing_scout)
+
+            with st.form("edit_scout_form"):
+                edit_col1, edit_col2 = st.columns(2)
+                with edit_col1:
+                    edit_name = st.text_input("Name", value=scout_info['name'])
+                    edit_email = st.text_input("Email", value=scout_info['email'])
+                with edit_col2:
+                    edit_patrol = st.selectbox("Patrol", PATROLS, index=PATROLS.index(scout_info['patrol']))
+
+                if st.form_submit_button("Save Changes"):
+                    if '@' not in edit_email:
+                        st.error("Please enter a valid email address")
+                    else:
+                        if st.session_state.finance_manager.edit_scout(
+                            st.session_state.editing_scout,
+                            name=edit_name,
+                            patrol=edit_patrol,
+                            email=edit_email
+                        ):
+                            st.success("Scout information updated successfully!")
+                            st.session_state.editing_scout = None
+                            st.experimental_rerun()
+
+            if st.button("Cancel Editing"):
+                st.session_state.editing_scout = None
+                st.experimental_rerun()
 
 elif page == "Reports":
     st.header("Financial Reports")
