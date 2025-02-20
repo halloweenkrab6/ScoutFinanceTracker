@@ -1,2 +1,5 @@
-scout_id,name,patrol,email,balance
-1,Chris Morris,Eagle,chris@theus.net,75.0
+scout_id,name,patrol,balance,email
+1,Colin Morris,Eagle,0.0,
+2,John Smith,Eagle,110.0,
+3,Matthew Morris,Eagle,45.0,
+4,Ryan Morris,Eagle,0.0,ryan@theus.net

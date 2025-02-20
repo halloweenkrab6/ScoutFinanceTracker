@@ -13,81 +13,77 @@ class ScoutFinanceManager:
 
     def _initialize_data(self):
         # Initialize scouts first
-        scout_columns = ['scout_id', 'name', 'patrol', 'email', 'balance']
         if not os.path.exists(self.scouts_file):
-            # Create new scouts file with proper columns
-            self.scouts = pd.DataFrame(columns=scout_columns)
+            self.scouts = pd.DataFrame({
+                'scout_id': [],
+                'name': [],
+                'patrol': [],
+                'email': [],  # Add email field
+                'balance': []
+            })
             self.scouts.to_csv(self.scouts_file, index=False)
         else:
-            try:
-                self.scouts = pd.read_csv(self.scouts_file)
-                # Add any missing columns
-                for col in scout_columns:
-                    if col not in self.scouts.columns:
-                        self.scouts[col] = '' if col == 'email' else 0.0 if col == 'balance' else None
-                self.scouts['balance'] = 0.0  # Reset balances for recalculation
-            except pd.errors.EmptyDataError:
-                # If file exists but is empty, create with proper columns
-                self.scouts = pd.DataFrame(columns=scout_columns)
+            self.scouts = pd.read_csv(self.scouts_file)
+            # Add email column if it doesn't exist
+            if 'email' not in self.scouts.columns:
+                self.scouts['email'] = ''
                 self.scouts.to_csv(self.scouts_file, index=False)
+            self.scouts['balance'] = 0.0  # Reset balances for recalculation
 
         # Then initialize transactions
-        transaction_columns = [
-            'date', 'description', 'category', 'amount', 'scout_amount',
-            'scout_id', 'type', 'account_type', 'affects_troop'
-        ]
-
         if not os.path.exists(self.transactions_file):
             # Create new transactions file with all columns
-            self.transactions = pd.DataFrame(columns=transaction_columns)
+            self.transactions = pd.DataFrame({
+                'date': [],
+                'description': [],
+                'category': [],
+                'amount': [],
+                'scout_id': [],
+                'type': [],
+                'account_type': [],  # 'troop' or 'scout'
+                'affects_troop': []  # Boolean flag for scout transactions that also affect troop
+            })
             self.transactions.to_csv(self.transactions_file, index=False)
         else:
-            try:
-                # Load existing transactions
-                self.transactions = pd.read_csv(self.transactions_file)
-                self.transactions['date'] = pd.to_datetime(self.transactions['date'])
+            # Load existing transactions
+            self.transactions = pd.read_csv(self.transactions_file)
+            self.transactions['date'] = pd.to_datetime(self.transactions['date'])
 
-                # Handle legacy data - add missing columns
-                if 'scout_amount' not in self.transactions.columns:
-                    self.transactions['scout_amount'] = self.transactions['amount']
+            # Handle legacy data - add account_type if it doesn't exist
+            if 'account_type' not in self.transactions.columns:
+                self.transactions['account_type'] = 'troop'
+                self.transactions.loc[
+                    (self.transactions['category'] == 'Scout Account Deposit') & 
+                    (self.transactions['scout_id'].notna()),
+                    'account_type'
+                ] = 'scout'
 
-                if 'account_type' not in self.transactions.columns:
-                    self.transactions['account_type'] = 'troop'
-                    self.transactions.loc[
-                        (self.transactions['category'] == 'Scout Account Deposit') & 
-                        (self.transactions['scout_id'].notna()),
-                        'account_type'
-                    ] = 'scout'
+            # Add affects_troop column if it doesn't exist
+            if 'affects_troop' not in self.transactions.columns:
+                self.transactions['affects_troop'] = False
 
-                if 'affects_troop' not in self.transactions.columns:
-                    self.transactions['affects_troop'] = False
+            # Save the updated structure
+            self.transactions.to_csv(self.transactions_file, index=False)
 
-                # Save the updated structure
-                self.transactions.to_csv(self.transactions_file, index=False)
+            # Calculate troop balance
+            troop_transactions = self.transactions[
+                (self.transactions['account_type'] == 'troop') |
+                (self.transactions['affects_troop'] == True)
+            ]
+            self.troop_balance = troop_transactions['amount'].sum()
 
-                # Calculate troop balance
-                troop_transactions = self.transactions[
-                    (self.transactions['account_type'] == 'troop') |
-                    (self.transactions['affects_troop'] == True)
-                ]
-                self.troop_balance = troop_transactions['amount'].sum()
+            # Recalculate scout balances
+            scout_transactions = self.transactions[
+                (self.transactions['account_type'] == 'scout') & 
+                (self.transactions['scout_id'].notna())
+            ]
+            for _, trans in scout_transactions.iterrows():
+                self._update_scout_balance(
+                    int(trans['scout_id']), 
+                    trans['amount']
+                )
 
-                # Recalculate scout balances
-                scout_transactions = self.transactions[
-                    (self.transactions['account_type'] == 'scout') & 
-                    (self.transactions['scout_id'].notna())
-                ]
-                for _, trans in scout_transactions.iterrows():
-                    self._update_scout_balance(
-                        int(trans['scout_id']), 
-                        trans['scout_amount']  # Use scout_amount for scout balances
-                    )
-            except pd.errors.EmptyDataError:
-                # If file exists but is empty, create with proper columns
-                self.transactions = pd.DataFrame(columns=transaction_columns)
-                self.transactions.to_csv(self.transactions_file, index=False)
-
-    def add_transaction(self, date, description, category, amount, scout_amount, scout_id, trans_type, affects_troop=False):
+    def add_transaction(self, date, description, category, amount, scout_id, trans_type, affects_troop=False):
         # Determine account type based on category and scout_id
         account_type = 'scout' if category == 'Scout Account Deposit' and scout_id else 'troop'
 
@@ -95,8 +91,7 @@ class ScoutFinanceManager:
             'date': [pd.to_datetime(date)],
             'description': [description],
             'category': [category],
-            'amount': [amount],  # Bank amount
-            'scout_amount': [scout_amount],  # Scout account amount
+            'amount': [amount],
             'scout_id': [scout_id],
             'type': [trans_type],
             'account_type': [account_type],
@@ -107,10 +102,8 @@ class ScoutFinanceManager:
         self.transactions.to_csv(self.transactions_file, index=False)
 
         if account_type == 'scout' and scout_id:
-            # Update scout balance with scout_amount
-            self._update_scout_balance(scout_id, scout_amount if trans_type == 'credit' else -scout_amount)
+            self._update_scout_balance(scout_id, amount if trans_type == 'credit' else -amount)
             if affects_troop:
-                # Update troop balance with bank amount
                 self.troop_balance += (amount if trans_type == 'credit' else -amount)
         elif account_type == 'troop':
             self.troop_balance += (amount if trans_type == 'credit' else -amount)
@@ -120,13 +113,13 @@ class ScoutFinanceManager:
             self.scouts.loc[self.scouts['scout_id'] == scout_id, 'balance'] += amount
             self.scouts.to_csv(self.scouts_file, index=False)
 
-    def add_scout(self, name, patrol, email):
+    def add_scout(self, name, patrol, email):  # Add email parameter
         scout_id = len(self.scouts) + 1
         new_scout = pd.DataFrame({
             'scout_id': [scout_id],
             'name': [name],
             'patrol': [patrol],
-            'email': [email],
+            'email': [email],  # Add email field
             'balance': [0.0]
         })
         self.scouts = pd.concat([self.scouts, new_scout], ignore_index=True)
