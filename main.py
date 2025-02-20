@@ -122,19 +122,25 @@ elif page == "Scouts":
         col1, col2 = st.columns(2)
         with col1:
             name = st.text_input("Scout Name")
+            email = st.text_input("Email")  # Add email input
         with col2:
             patrol = st.selectbox("Patrol", PATROLS)
 
         submit = st.form_submit_button("Add Scout")
         if submit and name:
-            scout_id = st.session_state.finance_manager.add_scout(name, patrol)
-            st.success(f"Scout added successfully! Scout ID: {scout_id}")
+            if '@' not in email:  # Basic email validation
+                st.error("Please enter a valid email address")
+            else:
+                scout_id = st.session_state.finance_manager.add_scout(name, patrol, email)
+                st.success(f"Scout added successfully! Scout ID: {scout_id}")
 
     # Display scout balances
     st.subheader("Scout Account Balances")
     scouts = st.session_state.finance_manager.scouts
     if not scouts.empty:
-        st.dataframe(scouts.style.format({
+        # Reorder columns to show email
+        display_scouts = scouts[['scout_id', 'name', 'email', 'patrol', 'balance']]
+        st.dataframe(display_scouts.style.format({
             'balance': format_currency
         }))
 
