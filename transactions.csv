@@ -1,9 +1,9 @@
-date,description,category,amount,scout_id,type,account_type,affects_troop
-2025-02-19,SA depoist,Other,200.0,1.0,credit,troop,False
-2025-02-19,February campout,Camping,-15.0,1.0,debit,troop,False
-2025-02-19,Stock items purchase,Equipment,-25.0,,debit,troop,False
-2025-02-19,SA Deposit Smith,Scout Account Deposit,50.0,2.0,credit,scout,False
-2025-02-20,SA Deposit,Scout Account Deposit,30.0,2.0,credit,scout,False
-2025-02-20,SA Deposit,Scout Account Deposit,30.0,2.0,credit,scout,True
-2025-02-21,Scout deposit,Scout Account Deposit,45.0,3.0,credit,scout,False
-2026-03-15,,Scout Account Deposit,75.0,1.0,credit,scout,False
+transaction_id,date,description,category,amount,scout_id,type,account_type,affects_troop,transaction_type,bank_delta,scout_delta,scout_ids,from_scout_id,to_scout_id
+TXN-001,2025-02-19,SA depoist,Other,200.0,1.0,credit,troop,False,EventIncome,200.0,0.0,1,,
+TXN-002,2025-02-19,February campout,Camping,-15.0,1.0,debit,troop,False,CampoutExpense,-15.0,0.0,1,,
+TXN-003,2025-02-19,Stock items purchase,Equipment,-25.0,,debit,troop,False,EventExpense,-25.0,0.0,,,
+TXN-004,2025-02-19,SA Deposit Smith,Scout Account Deposit,50.0,2.0,credit,scout,False,Deposit,0.0,50.0,2,,
+TXN-005,2025-02-20,SA Deposit,Scout Account Deposit,30.0,2.0,credit,scout,False,Deposit,0.0,30.0,2,,
+TXN-006,2025-02-20,SA Deposit,Scout Account Deposit,30.0,2.0,credit,scout,True,Deposit,30.0,30.0,2,,
+TXN-007,2025-02-21,Scout deposit,Scout Account Deposit,45.0,3.0,credit,scout,False,Deposit,0.0,45.0,3,,
+TXN-008,2026-03-15,,Scout Account Deposit,75.0,1.0,credit,scout,False,Deposit,0.0,75.0,1,,
