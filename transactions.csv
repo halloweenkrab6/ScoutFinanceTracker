@@ -6,3 +6,4 @@ date,description,category,amount,scout_id,type,account_type,affects_troop
 2025-02-20,SA Deposit,Scout Account Deposit,30.0,2.0,credit,scout,False
 2025-02-20,SA Deposit,Scout Account Deposit,30.0,2.0,credit,scout,True
 2025-02-21,Scout deposit,Scout Account Deposit,45.0,3.0,credit,scout,False
+2026-03-15,,Scout Account Deposit,75.0,1.0,credit,scout,False
