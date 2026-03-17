@@ -2,7 +2,7 @@ import pandas as pd
 import os
 
 TRANSACTION_TYPES = [
-    "EventIncome", "CampoutExpense", "EventExpense", "Fee", "Deposit", "Transfer"
+    "EventIncome", "CampoutExpense", "EventExpense", "Fee", "Deposit", "Transfer", "Other"
 ]
 
 PATROLS = ["Eagle", "Wolf", "Bear", "Tiger", "Lion", "Unassigned"]
@@ -224,7 +224,9 @@ class ScoutFinanceManager:
         return self.bank_balance - float(self.scouts["balance"].sum())
 
     def get_gross_assets(self):
-        return self.bank_balance
+        return (self.bank_balance
+                + self.get_troop_account_balance()
+                + self.get_negative_scout_sum())
 
     def get_positive_scout_sum(self):
         return float(self.scouts[self.scouts["balance"] > 0]["balance"].sum())

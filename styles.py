@@ -18,9 +18,30 @@ def apply_styles():
     .stApp {{ background-color: {BG} !important; }}
 
     /* ── Hide Streamlit chrome ── */
-    #MainMenu, footer, [data-testid="stToolbar"],
-    [data-testid="stDecoration"], [data-testid="stHeader"] {{
+    #MainMenu, footer, [data-testid="stDecoration"],
+    [data-testid="stAppDeployButton"],
+    [data-testid="stToolbarActions"] {{
         display: none !important;
+    }}
+    /* Make header transparent but keep it in the DOM so the toolbar works */
+    [data-testid="stHeader"] {{
+        background: transparent !important;
+        box-shadow: none !important;
+    }}
+    /* Keep the toolbar visible but transparent — it holds the expand button */
+    [data-testid="stToolbar"] {{
+        background: transparent !important;
+    }}
+    /* Style the expand-sidebar button so it's visible on the light bg */
+    [data-testid="stExpandSidebarButton"] {{
+        background: {NAVY} !important;
+        border-radius: 8px !important;
+        padding: 4px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+    }}
+    [data-testid="stExpandSidebarButton"] svg {{
+        fill: white !important;
+        color: white !important;
     }}
 
     /* ── Sidebar shell ── */

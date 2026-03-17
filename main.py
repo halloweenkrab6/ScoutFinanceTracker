@@ -153,7 +153,7 @@ def page_dashboard():
 
     cols = st.columns(5)
     cards = [
-        ("💰", "Gross Assets",          format_currency(gross), ""),
+        ("💰", "Troop Gross Assets",     format_currency(gross), ""),
         ("🏦", "Bank Balance",          format_currency(bank),  "green" if bank >= 0 else "red"),
         ("⚜️", "Troop Account",         format_currency(troop), "green" if troop >= 0 else "red"),
         ("👤", "Scout Balances (+)",    format_currency(pos),   "green"),
@@ -408,10 +408,7 @@ def page_register():
         (st.success if kind == "ok" else st.error)(msg)
         st.session_state.flash = None
 
-    rk = st.session_state.reg_key   # key suffix — bumped on submit to reset widgets
-
-    # ── Type + Description + Date + Amount ────────────────────────────────
-    st.markdown('<div class="card">', unsafe_allow_html=True)
+    rk = st.session_state.reg_key
 
     TYPE_LABELS = {
         "EventIncome":    "💵  Event Income",
@@ -420,155 +417,113 @@ def page_register():
         "Fee":            "📑  Fee",
         "Deposit":        "🏦  Deposit",
         "Transfer":       "🔄  Transfer",
+        "Other":          "📌  Other",
     }
 
-    c1, c2 = st.columns(2)
-    with c1:
-        txn_type = st.selectbox(
-            "Transaction Type *",
-            TRANSACTION_TYPES,
-            format_func=lambda t: TYPE_LABELS.get(t, t),
-            key=f"reg_type_{rk}",
-        )
-        description = st.text_input("Description *",
-                                    placeholder="Brief description…",
-                                    key=f"reg_desc_{rk}")
-    with c2:
-        date   = st.date_input("Date *", value=datetime.today(), key=f"reg_date_{rk}")
-        amount = st.number_input("Amount ($) *", min_value=0.01, value=50.0,
-                                 step=0.01, format="%.2f", key=f"reg_amt_{rk}")
-
-    st.markdown("---")
+    # ── Transaction type lives OUTSIDE the form so changing it reshapes the
+    #    form without discarding any already-typed values.
+    txn_type = st.selectbox(
+        "Transaction Type *",
+        TRANSACTION_TYPES,
+        format_func=lambda t: TYPE_LABELS.get(t, t),
+        key=f"reg_type_{rk}",
+    )
     defs = TYPE_DEFAULTS.get(txn_type, {"bank": 0, "scout": 0, "needs_scouts": False})
 
-    # ── Transfer: two scout selectors ─────────────────────────────────────
-    if txn_type == "Transfer":
-        st.markdown("**Transfer** — moves funds between two scout accounts (no bank change)")
-        scout_opts = [(int(s["scout_id"]), s["name"]) for _, s in fm.scouts.iterrows()]
-        if len(scout_opts) < 2:
-            st.warning("Need at least 2 scouts for a Transfer.")
-            st.markdown("</div>", unsafe_allow_html=True)
-            return
-        opt_map = {sid: name for sid, name in scout_opts}
-        tc1, tc2 = st.columns(2)
-        with tc1:
-            from_id = st.selectbox("From Scout *",
-                                   [s for s, _ in scout_opts],
-                                   format_func=lambda x: opt_map[x],
-                                   key=f"reg_from_{rk}")
-        with tc2:
-            to_opts = [s for s, _ in scout_opts if s != from_id]
-            to_id = st.selectbox("To Scout *",
-                                 to_opts,
-                                 format_func=lambda x: opt_map[x],
-                                 key=f"reg_to_{rk}")
-        bank_delta  = 0.0
-        scout_delta = 0.0
-        selected_scouts: list = []
+    scout_opts = [(int(s["scout_id"]), s["name"]) for _, s in fm.scouts.iterrows()]
+    opt_map    = {sid: name for sid, name in scout_opts}
 
-    # ── All other types: bank_delta, scout_delta, multi-scout ─────────────
-    else:
-        from_id = None
-        to_id   = None
+    # ── Everything else is inside a form so text inputs don't rerun on each
+    #    keystroke, making description (and all fields) typeable.
+    with st.form(f"reg_form_{rk}", clear_on_submit=False):
 
-        dc1, dc2 = st.columns(2)
-        with dc1:
-            bank_delta = st.number_input(
-                "Bank Delta ($)",
-                value=float(round(amount * defs["bank"], 2)),
-                step=0.01, format="%.2f",
-                help="Positive = money into bank, Negative = out of bank",
-                key=f"reg_bd_{rk}",
-            )
-        with dc2:
-            scout_delta = st.number_input(
-                "Scout Delta ($ per scout)",
-                value=float(round(amount * defs["scout"], 2)),
-                step=0.01, format="%.2f",
-                help="Applied to each selected scout's balance",
-                key=f"reg_sd_{rk}",
-            )
+        c1, c2 = st.columns(2)
+        with c1:
+            description = st.text_input("Description", placeholder="Brief description…")
+        with c2:
+            date = st.date_input("Date", value=datetime.today())
 
-        # Multi-scout selector
-        needs = defs["needs_scouts"]
-        st.markdown(f"**Scouts** {'*(required)*' if needs else '*(optional)*'}")
+        amount = st.number_input("Amount ($) *", min_value=0.01, value=50.0,
+                                 step=0.01, format="%.2f")
 
-        scout_opts = [(int(s["scout_id"]), s["name"]) for _, s in fm.scouts.iterrows()]
-        if scout_opts:
-            opt_map = {sid: name for sid, name in scout_opts}
+        st.markdown("---")
 
-            # Search filter
-            sf1, sf2, sf3 = st.columns([3, 1, 1])
-            with sf1:
-                search_scouts = st.text_input("", placeholder="Filter scouts…",
-                                              label_visibility="collapsed",
-                                              key=f"reg_sf_{rk}")
-            filtered_opts = [(sid, nm) for sid, nm in scout_opts
-                             if not search_scouts or search_scouts.lower() in nm.lower()]
+        # ── Transfer ──────────────────────────────────────────────────────
+        if txn_type == "Transfer":
+            st.markdown("Moves funds between two scout accounts — no bank change.")
+            if len(scout_opts) < 2:
+                st.warning("Need at least 2 scouts to create a Transfer.")
+                from_id = to_id = None
+                selected_scouts: list = []
+            else:
+                tc1, tc2 = st.columns(2)
+                with tc1:
+                    from_id = st.selectbox("From Scout *",
+                                           [s for s, _ in scout_opts],
+                                           format_func=lambda x: opt_map.get(x, str(x)))
+                with tc2:
+                    to_id = st.selectbox("To Scout *",
+                                         [s for s, _ in scout_opts],
+                                         format_func=lambda x: opt_map.get(x, str(x)))
+                selected_scouts = []
+            bank_delta  = 0.0
+            scout_delta = 0.0
 
-            with sf2:
-                if st.button("Select All", key=f"reg_all_{rk}", use_container_width=True):
-                    st.session_state[f"reg_ms_{rk}"] = [s for s, _ in filtered_opts]
-                    st.rerun()
-            with sf3:
-                if st.button("Clear", key=f"reg_clr_{rk}", use_container_width=True):
-                    st.session_state[f"reg_ms_{rk}"] = []
-                    st.rerun()
-
-            selected_scouts = st.multiselect(
-                "scouts_select",
-                options=[s for s, _ in filtered_opts],
-                format_func=lambda x: opt_map.get(x, str(x)),
-                label_visibility="collapsed",
-                key=f"reg_ms_{rk}",
-            )
+        # ── All other types ───────────────────────────────────────────────
         else:
-            st.info("No scouts registered yet.")
-            selected_scouts = []
+            from_id = to_id = None
 
-    # Effect preview
-    if txn_type != "Transfer":
-        parts = []
-        if bank_delta > 0:
-            parts.append(f"Bank **+{format_currency(bank_delta)}**")
-        elif bank_delta < 0:
-            parts.append(f"Bank **{format_currency(bank_delta)}**")
-        if scout_delta != 0 and selected_scouts:
-            n = len(selected_scouts)
-            sign = "+" if scout_delta > 0 else ""
-            parts.append(f"{n} scout{'s' if n != 1 else ''} **{sign}{format_currency(scout_delta)}** each")
-        if parts:
-            st.info("Effect: " + " · ".join(parts))
+            needs = defs["needs_scouts"]
+            st.markdown(f"**Scouts** {'*(required for this type)*' if needs else '*(optional)*'}")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+            if scout_opts:
+                selected_scouts = st.multiselect(
+                    "Select scouts",
+                    options=[s for s, _ in scout_opts],
+                    format_func=lambda x: opt_map.get(x, str(x)),
+                    label_visibility="collapsed",
+                )
+            else:
+                st.info("No scouts registered yet.")
+                selected_scouts = []
 
-    # ── Submit ─────────────────────────────────────────────────────────────
-    if st.button("✓  Submit Transaction", use_container_width=True, key=f"reg_submit_{rk}"):
-        # Validation
-        if not str(description).strip():
-            st.session_state.flash = ("err", "Description is required.")
-            st.rerun()
-        elif txn_type == "Transfer" and (from_id is None or to_id is None):
-            st.session_state.flash = ("err", "Both scouts required for Transfer.")
-            st.rerun()
-        elif txn_type in ("Deposit", "Fee") and not selected_scouts:
-            st.session_state.flash = ("err", f"{txn_type} requires at least one scout.")
-            st.rerun()
-        else:
-            txn_id = fm.add_transaction(
-                date=date,
-                description=str(description).strip(),
-                transaction_type=txn_type,
-                amount=float(amount),
-                bank_delta=float(bank_delta),
-                scout_delta=float(scout_delta),
-                scout_ids=selected_scouts if txn_type != "Transfer" else [],
-                from_scout_id=from_id if txn_type == "Transfer" else None,
-                to_scout_id=to_id if txn_type == "Transfer" else None,
-            )
-            st.session_state.flash = ("ok", f"Transaction **{txn_id}** recorded successfully!")
-            st.session_state.reg_key += 1   # reset form widgets
-            st.rerun()
+            # Auto-compute deltas from amount × type multipliers
+            bank_delta  = None   # resolved on submit
+            scout_delta = None
+
+        # ── Submit button ─────────────────────────────────────────────────
+        submitted = st.form_submit_button("✓  Submit Transaction", use_container_width=True)
+
+        if submitted:
+            # Resolve auto-computed deltas
+            if bank_delta is None:
+                bank_delta  = float(amount) * defs["bank"]
+            if scout_delta is None:
+                scout_delta = float(amount) * defs["scout"]
+
+            # Validation
+            if txn_type == "Transfer" and len(scout_opts) < 2:
+                st.error("Need at least 2 scouts for a Transfer.")
+            elif txn_type == "Transfer" and from_id == to_id:
+                st.error("From and To scouts must be different.")
+            elif txn_type in ("Deposit", "Fee") and not selected_scouts:
+                st.error(f"{txn_type} requires at least one scout.")
+            else:
+                desc = str(description).strip() or "N/A"
+                txn_id = fm.add_transaction(
+                    date=date,
+                    description=desc,
+                    transaction_type=txn_type,
+                    amount=float(amount),
+                    bank_delta=float(bank_delta),
+                    scout_delta=float(scout_delta),
+                    scout_ids=selected_scouts if txn_type != "Transfer" else [],
+                    from_scout_id=from_id if txn_type == "Transfer" else None,
+                    to_scout_id=to_id if txn_type == "Transfer" else None,
+                )
+                st.session_state.flash = ("ok", f"Transaction **{txn_id}** recorded!")
+                st.session_state.reg_key += 1   # bumping the key resets all form widgets
+                st.rerun()
 
 
 # ═════════════════════════════════════════════════════════════════════════════

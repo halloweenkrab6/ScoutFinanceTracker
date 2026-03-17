@@ -2,7 +2,7 @@ import plotly.graph_objects as go
 import pandas as pd
 
 TRANSACTION_TYPES = [
-    "EventIncome", "CampoutExpense", "EventExpense", "Fee", "Deposit", "Transfer"
+    "EventIncome", "CampoutExpense", "EventExpense", "Fee", "Deposit", "Transfer", "Other"
 ]
 
 PATROLS = ["Eagle", "Wolf", "Bear", "Tiger", "Lion", "Unassigned"]
@@ -15,6 +15,7 @@ TYPE_META = {
     "Fee":            ("#fef3c7", "#92400e", "Fee"),
     "Deposit":        ("#dbeafe", "#1e40af", "Deposit"),
     "Transfer":       ("#ede9fe", "#5b21b6", "Transfer"),
+    "Other":          ("#f3f4f6", "#374151", "Other"),
 }
 
 # Multipliers for auto-populating bank_delta / scout_delta in Register
@@ -25,6 +26,7 @@ TYPE_DEFAULTS = {
     "Fee":            {"bank":  0, "scout": -1, "needs_scouts": True},
     "Deposit":        {"bank":  1, "scout":  1, "needs_scouts": True},
     "Transfer":       {"bank":  0, "scout":  0, "needs_scouts": False},
+    "Other":          {"bank":  0, "scout":  0, "needs_scouts": False},
 }
 
 
@@ -108,7 +110,7 @@ def txn_table_html(df, scout_lookup=None, show_scouts=True):
         <tr style="border-bottom:1px solid #f3f4f6">
           <td style="font-family:monospace;font-size:11px;color:#9ca3af;padding:11px 14px;white-space:nowrap">{txn_id}</td>
           <td style="white-space:nowrap;color:#6b7280;font-size:13px;padding:11px 14px">{date_str}</td>
-          <td style="font-weight:500;color:#111827;padding:11px 14px">{desc or '<em style="color:#9ca3af">—</em>'}</td>
+          <td style="font-weight:500;color:#111827;padding:11px 14px">{desc or '<span style="color:#9ca3af">N/A</span>'}</td>
           <td style="padding:11px 14px">{badge_html(txn_type)}</td>
           <td style="font-weight:700;color:{amt_color};text-align:right;white-space:nowrap;padding:11px 14px">{format_currency(amount)}</td>
           <td style="font-size:11px;padding:11px 14px;white-space:nowrap">{delta_html}</td>
