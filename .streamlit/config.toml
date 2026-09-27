@@ -5,7 +5,6 @@ port = 5000
 
 [theme]
 primaryColor = "#003f87"  # Scout blue
-secondaryColor = "#da4830"  # Scout red
 backgroundColor = "#ffffff"
 secondaryBackgroundColor = "#f0f2f6"
 textColor = "#262730"
