@@ -1,6 +1,7 @@
 import streamlit as st
 
-NAVY = "#0d2137"
+SIDEBAR_BG = "#D5CDBC"
+SIDEBAR_TEXT = "#515354"
 ACCENT = "#2563eb"
 ACCENT_LIGHT = "#dbeafe"
 BG = "#f1f5f9"
@@ -32,29 +33,40 @@ def apply_styles():
     [data-testid="stToolbar"] {{
         background: transparent !important;
     }}
-    /* Style the expand-sidebar button so it's visible on the light bg */
-    [data-testid="stExpandSidebarButton"] {{
-        background: {NAVY} !important;
+    /* Sidebar expand/collapse buttons: inverse of the sidebar colours */
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stSidebarCollapseButton"] button {{
+        background: {SIDEBAR_TEXT} !important;
+        border: none !important;
         border-radius: 8px !important;
         padding: 4px !important;
         box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
     }}
-    [data-testid="stExpandSidebarButton"] svg {{
-        fill: white !important;
-        color: white !important;
+    [data-testid="stExpandSidebarButton"]:hover,
+    [data-testid="stSidebarCollapseButton"] button:hover {{
+        filter: brightness(1.08) !important;
+    }}
+    /* The arrow is a Material icon font glyph with an inline colour */
+    [data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"],
+    [data-testid="stSidebarCollapseButton"] [data-testid="stIconMaterial"] {{
+        color: {SIDEBAR_BG} !important;
     }}
 
     /* ── Sidebar shell ── */
     [data-testid="stSidebar"] {{
-        background-color: {NAVY} !important;
+        background-color: {SIDEBAR_BG} !important;
+    }}
+    /* Fixed width only while open: collapsing shrinks the sidebar to 0, and
+       forcing a width then would leave a blank gap that pushes the header right */
+    [data-testid="stSidebar"][aria-expanded="true"] {{
         min-width: 220px !important;
         max-width: 220px !important;
     }}
     [data-testid="stSidebar"] > div:first-child {{
-        background-color: {NAVY} !important;
+        background-color: {SIDEBAR_BG} !important;
     }}
     [data-testid="stSidebarContent"] {{
-        background-color: {NAVY} !important;
+        background-color: {SIDEBAR_BG} !important;
         padding: 0 !important;
     }}
 
@@ -63,7 +75,7 @@ def apply_styles():
     [data-testid="stSidebar"] span,
     [data-testid="stSidebar"] label,
     [data-testid="stSidebar"] .stMarkdown {{
-        color: rgba(255,255,255,0.55) !important;
+        color: {SIDEBAR_TEXT} !important;
     }}
 
     /* ── Sidebar nav radio: hide label title ── */
@@ -80,7 +92,7 @@ def apply_styles():
         padding: 10px 14px !important;
         border-radius: 8px !important;
         cursor: pointer !important;
-        color: rgba(255,255,255,0.62) !important;
+        color: {SIDEBAR_TEXT} !important;
         font-size: 14px !important;
         font-weight: 500 !important;
         transition: background 0.15s, color 0.15s !important;
@@ -89,13 +101,13 @@ def apply_styles():
         gap: 8px !important;
     }}
     [data-testid="stSidebar"] div[role="radiogroup"] label:hover {{
-        background: rgba(255,255,255,0.07) !important;
-        color: white !important;
+        background: {SIDEBAR_TEXT}1A !important;
+        color: {SIDEBAR_TEXT} !important;
     }}
     /* Active nav item via :has */
     [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {{
-        background: rgba(37,99,235,0.22) !important;
-        color: #93c5fd !important;
+        background: {SIDEBAR_TEXT}2E !important;
+        color: {SIDEBAR_TEXT} !important;
         font-weight: 600 !important;
     }}
     /* Hide the actual radio circle */

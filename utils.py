@@ -1,32 +1,13 @@
 import plotly.graph_objects as go
 import pandas as pd
 
-TRANSACTION_TYPES = [
-    "EventIncome", "CampoutExpense", "EventExpense", "Fee", "Deposit", "Transfer", "Other"
-]
-
 PATROLS = ["Eagle", "Wolf", "Bear", "Tiger", "Lion", "Unassigned"]
 
 # (bg, text, display label)
 TYPE_META = {
-    "EventIncome":    ("#d1fae5", "#065f46", "Event Income"),
-    "CampoutExpense": ("#fed7aa", "#9a3412", "Campout Expense"),
-    "EventExpense":   ("#fee2e2", "#991b1b", "Event Expense"),
-    "Fee":            ("#fef3c7", "#92400e", "Fee"),
-    "Deposit":        ("#dbeafe", "#1e40af", "Deposit"),
-    "Transfer":       ("#ede9fe", "#5b21b6", "Transfer"),
-    "Other":          ("#f3f4f6", "#374151", "Other"),
-}
-
-# Multipliers for auto-populating bank_delta / scout_delta in Register
-TYPE_DEFAULTS = {
-    "EventIncome":    {"bank":  1, "scout":  0, "needs_scouts": False},
-    "CampoutExpense": {"bank": -1, "scout":  0, "needs_scouts": False},
-    "EventExpense":   {"bank": -1, "scout":  0, "needs_scouts": False},
-    "Fee":            {"bank":  0, "scout": -1, "needs_scouts": True},
-    "Deposit":        {"bank":  1, "scout":  1, "needs_scouts": True},
-    "Transfer":       {"bank":  0, "scout":  0, "needs_scouts": False},
-    "Other":          {"bank":  0, "scout":  0, "needs_scouts": False},
+    "Deposit": ("#dbeafe", "#1e40af", "Deposit"),
+    "Refund":  ("#fef3c7", "#92400e", "Refund"),
+    "Event":   ("#fee2e2", "#991b1b", "Event"),
 }
 
 
@@ -87,19 +68,9 @@ def txn_table_html(df, scout_lookup=None, show_scouts=True):
         # Scouts column
         scouts_td_content = ""
         if show_scouts and scout_lookup:
-            if txn_type == "Transfer":
-                fi = _safe_int(row.get("from_scout_id"))
-                ti = _safe_int(row.get("to_scout_id"))
-                parts = []
-                if fi and fi in scout_lookup:
-                    parts.append(f"↓ {scout_lookup[fi]}")
-                if ti and ti in scout_lookup:
-                    parts.append(f"↑ {scout_lookup[ti]}")
-                scouts_td_content = " / ".join(parts) or "—"
-            else:
-                ids = _parse_ids(str(row.get("scout_ids", "")))
-                names = [scout_lookup[i] for i in ids if i in scout_lookup]
-                scouts_td_content = ", ".join(names) if names else "—"
+            ids = _parse_ids(str(row.get("scout_ids", "")))
+            names = [scout_lookup[i] for i in ids if i in scout_lookup]
+            scouts_td_content = ", ".join(names) if names else "—"
 
         scouts_td = (
             f'<td style="font-size:12px;color:#6b7280;padding:11px 14px">'
@@ -117,7 +88,7 @@ def txn_table_html(df, scout_lookup=None, show_scouts=True):
           {scouts_td}
         </tr>"""
 
-    return f"""
+    html = f"""
     <div style="overflow-x:auto;border-radius:10px;border:1px solid #e5e7eb">
     <table style="width:100%;border-collapse:collapse;font-size:14px;background:white">
       <thead>
@@ -134,6 +105,9 @@ def txn_table_html(df, scout_lookup=None, show_scouts=True):
       <tbody>{rows_html}</tbody>
     </table>
     </div>"""
+    # Markdown ends an HTML block at a blank line and shows indented lines after it
+    # as code, so flatten the markup (hidden columns leave blank lines behind).
+    return "\n".join(line.strip() for line in html.splitlines() if line.strip())
 
 
 def _th():
@@ -192,16 +166,6 @@ def create_type_breakdown(transactions):
         legend=dict(orientation="v", x=1.02, y=0.5, font=dict(size=11)),
     )
     return fig
-
-
-def _safe_int(val):
-    try:
-        s = str(val).strip()
-        if s and s not in ("", "nan", "None"):
-            return int(float(s))
-    except Exception:
-        pass
-    return None
 
 
 def _parse_ids(scout_ids_str):

@@ -1,5 +1,5 @@
-scout_id,name,patrol,balance,email,age,parent_names
-1,Colin Morris,Eagle,75.0,,0,
-2,John Smith,Eagle,110.0,,0,
-3,Matthew Morris,Eagle,45.0,,0,
-4,Ryan Morris,Eagle,0.0,ryan@theus.net,0,
+scout_id,name,age,patrol,email,balance
+1,Colin Morris,0,Eagle,,-15.0
+2,John Smith,0,Eagle,,-15.0
+3,Matthew Morris,0,Eagle,,-15.0
+4,Ryan Morris,0,Eagle,ryan@theus.net,-15.0
