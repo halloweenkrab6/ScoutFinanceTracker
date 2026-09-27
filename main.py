@@ -135,6 +135,12 @@ def stat_card(icon, label, value, color=""):
     </div>"""
 
 
+def chart_placeholder(text):
+    """Stands in for a chart until there's enough data; same height as the charts."""
+    return (f'<div style="height:210px;display:flex;align-items:center;justify-content:center;'
+            f'color:#9ca3af;font-size:14px">{text}</div>')
+
+
 def section_header(title):
     st.markdown(f'<div class="section-hdr">{title}</div>', unsafe_allow_html=True)
 
@@ -182,23 +188,26 @@ def page_dashboard():
 
     # Charts
     txns = fm.get_ledger()
-    if not txns.empty:
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-        ch1, ch2 = st.columns([3, 2])
-        with ch1:
-            st.markdown('<div class="card"><div class="card-title">Bank Balance Timeline</div>',
-                        unsafe_allow_html=True)
-            fig = create_balance_chart(txns)
-            if fig:
-                st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
-            st.markdown("</div>", unsafe_allow_html=True)
-        with ch2:
-            st.markdown('<div class="card"><div class="card-title">By Transaction Type</div>',
-                        unsafe_allow_html=True)
-            fig2 = create_type_breakdown(txns)
-            if fig2:
-                st.plotly_chart(fig2, width="stretch", config={"displayModeBar": False})
-            st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    ch1, ch2 = st.columns([3, 2])
+    with ch1:
+        st.markdown('<div class="card"><div class="card-title">Bank Balance Timeline</div>',
+                    unsafe_allow_html=True)
+        if len(txns) >= 2:
+            st.plotly_chart(create_balance_chart(txns), width="stretch",
+                            config={"displayModeBar": False})
+        else:
+            st.markdown(chart_placeholder("No timeline yet"), unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    with ch2:
+        st.markdown('<div class="card"><div class="card-title">By Transaction Type</div>',
+                    unsafe_allow_html=True)
+        if (txns["amount"] != 0).any():
+            st.plotly_chart(create_type_breakdown(txns), width="stretch",
+                            config={"displayModeBar": False})
+        else:
+            st.markdown(chart_placeholder("No transactions yet"), unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # Full ledger
     section_header("Full Ledger")
