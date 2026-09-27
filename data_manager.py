@@ -53,14 +53,16 @@ class ScoutFinanceManager:
         self.events = self._read("events.csv", EVENT_COLS)
 
         x = self._read("event_expenses.csv", EXPENSE_COLS)
-        x["unit_price"] = pd.to_numeric(x["unit_price"], errors="coerce").fillna(0.0)
-        x["troop_paid"] = pd.to_numeric(x["troop_paid"], errors="coerce").fillna(0.0)
+        # astype(float): an empty column would otherwise come back as int64, and
+        # the data editor rounds anything typed into an integer column.
+        x["unit_price"] = pd.to_numeric(x["unit_price"], errors="coerce").fillna(0.0).astype(float)
+        x["troop_paid"] = pd.to_numeric(x["troop_paid"], errors="coerce").fillna(0.0).astype(float)
         x["charge_all"] = x["charge_all"].astype(str).str.lower() == "true"
         self.expenses = x
 
         c = self._read("event_charges.csv", CHARGE_COLS)
         c["scout_id"] = c["scout_id"].astype(int)
-        c["amount_override"] = pd.to_numeric(c["amount_override"], errors="coerce")
+        c["amount_override"] = pd.to_numeric(c["amount_override"], errors="coerce").astype(float)
         self.charges = c
 
         self._recalculate_balances()

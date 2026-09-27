@@ -624,8 +624,8 @@ def page_event_detail():
             column_order=["Expense", "Price per scout", "Troop paid", "Charge all"],
             column_config={
                 "Expense":         st.column_config.TextColumn(required=True),
-                "Price per scout": st.column_config.NumberColumn(min_value=0.0, format="$%.2f", default=0.0),
-                "Troop paid":      st.column_config.NumberColumn(min_value=0.0, format="$%.2f", default=0.0),
+                "Price per scout": st.column_config.NumberColumn(min_value=0.0, step=0.01, format="$%.2f", default=0.0),
+                "Troop paid":      st.column_config.NumberColumn(min_value=0.0, step=0.01, format="$%.2f", default=0.0),
                 "Charge all":      st.column_config.CheckboxColumn(default=True),
             },
             key=f"evt_exp_{eid}_{ver}",
@@ -667,7 +667,7 @@ def page_event_detail():
                     column_config={
                         "Scout":   st.column_config.SelectboxColumn(options=list(scout_label.values()), required=True),
                         "Expense": st.column_config.SelectboxColumn(options=list(exp_label.values()), required=True),
-                        "Amount":  st.column_config.NumberColumn(min_value=0.0, format="$%.2f", required=True),
+                        "Amount":  st.column_config.NumberColumn(min_value=0.0, step=0.01, format="$%.2f", required=True),
                     },
                     key=f"evt_ov_{eid}_{ver}",
                 )
